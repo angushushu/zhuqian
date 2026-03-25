@@ -1,0 +1,40 @@
+[
+  {
+    "name": "f",
+    "rules": [
+      {
+        "name": "一层括号",
+        "pattern": "\\[[^\\[\\]]*\\]",
+        "color": [
+          230,
+          80,
+          80
+        ],
+        "bold": false,
+        "is_background": true
+      },
+      {
+        "name": "二层括号",
+        "pattern": "\\[\\[[^\\[\\]]*\\]\\]",
+        "color": [
+          77,
+          200,
+          78
+        ],
+        "bold": false,
+        "is_background": true
+      },
+      {
+        "name": "三层括号",
+        "pattern": "\\[\\[\\[[^\\[\\]]*\\]\\]\\]",
+        "color": [
+          80,
+          80,
+          230
+        ],
+        "bold": false,
+        "is_background": true
+      }
+    ]
+  }
+]

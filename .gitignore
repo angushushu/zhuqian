@@ -1,0 +1,30 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Cargo (local overrides; keep Cargo.lock for this app)
+.cargo/config.toml.local
+
+# Debug / local logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# AI / assistant (local session & tooling)
+.claude/
+.CLAUDE.md
+.design.md
+
+# Editors / IDEs
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment / secrets
+.env
+.env.*
