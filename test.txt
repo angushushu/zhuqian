@@ -1,0 +1,2 @@
+[测试文件]see if highlight really work
+[[How are you]]This is fantastic! Now that[[This was my dream!]]

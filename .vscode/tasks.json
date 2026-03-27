@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "compile-extension",
+			"type": "shell",
+			"command": "npm run compile",
+			"options": {
+				"cwd": "${workspaceRoot}/zq-vscode"
+			},
+			"group": "build",
+			"problemMatcher": "$tsc",
+			"presentation": {
+				"reveal": "silent"
+			}
+		}
+	]
+}

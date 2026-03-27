@@ -1,6 +1,6 @@
 {
-  "name": "zq-vscode",
-  "displayName": "ZhuQian Labels",
+  "name": "zhuqian",
+  "displayName": "ZhuQian",
   "description": "Real-time labels and highlighting for ZhuQian format",
   "version": "0.1.0",
   "publisher": "angushushu",
@@ -40,19 +40,88 @@
         "zhuqian.accentColorUi": {
           "type": "string",
           "default": "#0078d7",
-          "description": "Accent color for UI elements in ZhuQian (Hex format)"
+          "format": "color-hex",
+          "description": "Accent color for UI elements (Hex format, e.g. #0078d7)"
         },
         "zhuqian.accentColorHl": {
           "type": "string",
           "default": "#b4a000",
-          "description": "Accent color for headings and highlights (Hex format)"
+          "format": "color-hex",
+          "description": "Accent color for headings and highlights (Hex format, e.g. #b4a000)"
+        },
+        "zhuqian.bgMain": {
+          "type": "string",
+          "default": "#f8f6eb",
+          "format": "color-hex",
+          "description": "Main editor background color (Hex format)"
+        },
+        "zhuqian.bgSide": {
+          "type": "string",
+          "default": "#eeece1",
+          "format": "color-hex",
+          "description": "Sidebar/Panel background color (Hex format)"
+        },
+        "zhuqian.textMain": {
+          "type": "string",
+          "default": "#1e1e1e",
+          "format": "color-hex",
+          "description": "Main text color (Hex format)"
+        },
+        "zhuqian.textSide": {
+          "type": "string",
+          "default": "#2d2d2d",
+          "format": "color-hex",
+          "description": "Sidebar/Panel text color (Hex format)"
+        },
+        "zhuqian.fontSize": {
+          "type": "number",
+          "default": 16,
+          "description": "Base font size for ZhuQian (Note: limited support in VS Code decorations)"
+        },
+        "zhuqian.markdownRender": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable real-time markdown-style rendering enhancements"
         },
         "zhuqian.highlightRules": {
           "type": "string",
           "default": "",
           "description": "JSON string of custom highlight rules. If empty, uses default bracket rules."
+        },
+        "zhuqian.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable ZhuQian real-time syntax highlighting and labels."
         }
       }
+    },
+    "commands": [
+      {
+        "command": "zhuqian.openSettings",
+        "title": "ZhuQian: Open Visual Settings (Desktop Style)",
+        "category": "ZhuQian"
+      },
+      {
+        "command": "zhuqian.toggle",
+        "title": "ZhuQian: Toggle Rendering",
+        "category": "ZhuQian"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "zhuqian.toggle",
+        "key": "ctrl+alt+z",
+        "mac": "cmd+alt+z",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "zhuqian.openSettings",
+          "when": "true"
+        }
+      ]
     }
   },
   "scripts": {
