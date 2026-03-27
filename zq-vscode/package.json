@@ -1,0 +1,67 @@
+{
+  "name": "zq-vscode",
+  "displayName": "ZhuQian Labels",
+  "description": "Real-time labels and highlighting for ZhuQian format",
+  "version": "0.1.0",
+  "publisher": "angushushu",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/angushushu/zhuqian"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "license": "GPL-3.0-only",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:zq",
+    "onLanguage:plaintext",
+    "onLanguage:markdown"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "zq",
+        "aliases": [
+          "ZhuQian"
+        ],
+        "extensions": [
+          ".zq"
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "ZhuQian",
+      "properties": {
+        "zhuqian.accentColorUi": {
+          "type": "string",
+          "default": "#0078d7",
+          "description": "Accent color for UI elements in ZhuQian (Hex format)"
+        },
+        "zhuqian.accentColorHl": {
+          "type": "string",
+          "default": "#b4a000",
+          "description": "Accent color for headings and highlights (Hex format)"
+        },
+        "zhuqian.highlightRules": {
+          "type": "string",
+          "default": "",
+          "description": "JSON string of custom highlight rules. If empty, uses default bracket rules."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./ && node -e \"require('fs').cpSync('src/pkg', 'out/pkg', {recursive: true})\"",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.5"
+  }
+}
