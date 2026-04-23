@@ -1,6 +1,13 @@
 use serde::{Serialize, Deserialize};
-use regex::Regex;
 use wasm_bindgen::prelude::*;
+
+pub mod label;
+pub use label::*;
+
+pub mod template;
+pub use template::*;
+
+
 
 pub const ZQ_META_PREFIX: &str = "---zq-meta---\n";
 pub const ZQ_META_SUFFIX: &str = "\n---end-meta---\n";
@@ -15,27 +22,11 @@ pub struct StyledSpan {
     pub bold: bool,
     pub italic: bool,
     pub strikethrough: bool,
+    pub is_hidden: bool,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct HighlightRule {
-    pub name: String,
-    pub pattern: String,
-    pub color: [u8; 3],
-    pub bold: bool,
-    pub is_background: bool,
-    #[serde(skip)]
-    compiled: Option<Regex>,
-}
+// Legacy HighlightRule removed, preserving simple StyledSpan
 
-impl HighlightRule {
-    pub fn new(name: &str, pattern: &str, color: [u8; 3], bold: bool, is_bg: bool) -> Self {
-        let compiled = Regex::new(pattern).ok();
-        Self { name: name.into(), pattern: pattern.into(), color, bold, is_background: is_bg, compiled }
-    }
-    pub fn compile(&mut self) { self.compiled = Regex::new(&self.pattern).ok(); }
-    pub fn regex(&self) -> Option<&Regex> { self.compiled.as_ref() }
-}
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum BaseTheme { Light, Dark }
@@ -50,17 +41,23 @@ pub struct ZqTheme {
     pub text_side: [u8; 3],
     pub accent_ui: [u8; 3],
     pub accent_hl: [u8; 3],
-    pub highlight_rules: Vec<HighlightRule>,
+    #[serde(default = "default_level_colors")]
+    pub level_colors: Vec<[u8; 3]>,
+}
+
+fn default_level_colors() -> Vec<[u8; 3]> {
+    vec![
+        [230, 80, 80],
+        [80, 200, 80],
+        [80,  80, 230],
+        [230, 180, 50],
+        [180, 80, 200],
+        [80, 200, 200],
+    ]
 }
 
 impl ZqTheme {
     pub fn new_light() -> Self {
-        let mut rules = vec![
-            HighlightRule::new("一层括号", r"\[[^\[\]]*\]", [230, 80, 80], false, true),
-            HighlightRule::new("二层括号", r"\[\[[^\[\]]*\]\]", [80, 200, 80], false, true),
-            HighlightRule::new("三层括号", r"\[\[\[[^\[\]]*\]\]\]", [80, 80, 230], false, true),
-        ];
-        for r in &mut rules { r.compile(); }
         Self {
             name: "竹签默认 (浅)".into(),
             base: BaseTheme::Light,
@@ -70,17 +67,15 @@ impl ZqTheme {
             text_side:           [45,  45,  45 ],
             accent_ui:           [142, 172, 80 ], // Bamboo Green
             accent_hl:           [180, 160, 0  ],
-            highlight_rules:     rules,
+            level_colors:        default_level_colors(),
         }
     }
 
     pub fn new_dark() -> Self {
-        let mut rules = vec![
-            HighlightRule::new("一层括号", r"\[[^\[\]]*\]", [180, 60, 60], false, true),
-            HighlightRule::new("二层括号", r"\[\[[^\[\]]*\]\]", [60, 150, 60], false, true),
-            HighlightRule::new("三层括号", r"\[\[\[[^\[\]]*\]\]\]", [60, 60, 180], false, true),
-        ];
-        for r in &mut rules { r.compile(); }
+        let mut dark_colors = default_level_colors();
+        dark_colors[0] = [180, 60, 60];
+        dark_colors[1] = [60, 150, 60];
+        dark_colors[2] = [60, 60, 180];
         Self {
             name: "竹签默认 (深)".into(),
             base: BaseTheme::Dark,
@@ -90,7 +85,7 @@ impl ZqTheme {
             text_side:           [180, 180, 180],
             accent_ui:           [160, 200, 60 ], // Vibrant Bamboo Green
             accent_hl:           [255, 230, 0  ],
-            highlight_rules:     rules,
+            level_colors:        dark_colors,
         }
     }
 }
@@ -99,10 +94,11 @@ impl Default for ZqTheme {
     fn default() -> Self {
         Self::new_light()
     }
-}#[derive(Clone, Serialize, Deserialize)]
-pub struct HighlightRuleSet {
-    pub name: String,
-    pub rules: Vec<HighlightRule>,
+}
+
+pub fn strip_labels(text: &str) -> String {
+    let labels = label::parse_semantic_labels(text);
+    label::strip_semantic_labels(text, &labels)
 }
 
 pub fn extract_headings(text: &str) -> Vec<(usize, usize, String)> {
@@ -118,11 +114,17 @@ pub fn extract_headings(text: &str) -> Vec<(usize, usize, String)> {
     out
 }
 
+pub fn extract_semantic_labels(text: &str) -> Vec<label::SemanticLabel> {
+    label::parse_semantic_labels(text)
+}
+
 pub fn deserialize_zq_file(raw: &str) -> (String, Option<DisplayPrefs>) {
-    if let Some(rest) = raw.strip_prefix(ZQ_META_PREFIX) {
-        if let Some(idx) = rest.find(ZQ_META_SUFFIX) {
-            let meta = &rest[..idx];
-            let body = &rest[idx + ZQ_META_SUFFIX.len()..];
+    if raw.starts_with("---zq-meta---") {
+        if let Some(suffix_idx) = raw.find("---end-meta---") {
+            let prefix_end = raw.find('\n').unwrap_or(0) + 1;
+            let meta = &raw[prefix_end..suffix_idx].trim();
+            let body_start = suffix_idx + "---end-meta---".len();
+            let body = &raw[body_start..].trim_start_matches(|c| c == '\r' || c == '\n');
             if let Ok(prefs) = serde_json::from_str::<DisplayPrefs>(meta) {
                 return (body.to_string(), Some(prefs));
             }
@@ -139,6 +141,20 @@ pub fn serialize_zq_file(text: &str, prefs: &DisplayPrefs) -> String {
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
 pub enum Language { #[default] Zh, En }
 
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct TagCode {
+    pub symbol: String,
+    pub label: String,
+    pub color: [f32; 3],
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct RelationCode {
+    pub prefix: String,
+    pub label: String,
+    pub color: [f32; 3],
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DisplayPrefs {
     pub font_size: f32,
@@ -148,6 +164,44 @@ pub struct DisplayPrefs {
     pub panel_bg_image_path: Option<String>,
     pub language: Language,
     pub theme: ZqTheme,
+    pub hide_labels: bool,
+    #[serde(default = "default_zen_mode")]
+    pub zen_mode: bool,
+    #[serde(default = "default_delimiter")]
+    pub label_delimiter: [String; 2],
+    #[serde(default = "default_label_types")]
+    pub label_types: Vec<LabelType>,
+    #[serde(default = "default_tag_codes")]
+    pub tag_codes: Vec<TagCode>,
+    #[serde(default = "default_relation_codes")]
+    pub relation_codes: Vec<RelationCode>,
+}
+
+fn default_tag_codes() -> Vec<TagCode> {
+    vec![
+        TagCode { symbol: "+".into(), label: "正面/支持".into(), color: [0.3, 0.8, 0.3] },
+        TagCode { symbol: "-".into(), label: "负面/反对".into(), color: [0.8, 0.3, 0.3] },
+        TagCode { symbol: "?".into(), label: "存疑/检查".into(), color: [0.8, 0.8, 0.3] },
+        TagCode { symbol: "~".into(), label: "让步".into(), color: [0.4, 0.6, 0.8] },
+    ]
+}
+
+fn default_relation_codes() -> Vec<RelationCode> {
+    vec![
+        RelationCode { prefix: "rf".into(), label: "驳斥".into(), color: [0.8, 0.2, 0.2] },
+        RelationCode { prefix: "sp".into(), label: "支持".into(), color: [0.2, 0.8, 0.2] },
+        RelationCode { prefix: "@".into(), label: "引用".into(), color: [0.4, 0.4, 0.8] },
+    ]
+}
+
+fn default_zen_mode() -> bool { true }
+
+fn default_delimiter() -> [String; 2] {
+    [DEFAULT_OPEN.into(), DEFAULT_CLOSE.into()]
+}
+
+fn default_label_types() -> Vec<LabelType> {
+    vec![LabelType::note_type()]
 }
 
 impl Default for DisplayPrefs {
@@ -160,6 +214,12 @@ impl Default for DisplayPrefs {
             panel_bg_image_path: None,
             language: Language::default(),
             theme: ZqTheme::default(),
+            hide_labels: false,
+            zen_mode: true,
+            label_delimiter: default_delimiter(),
+            label_types: default_label_types(),
+            tag_codes: default_tag_codes(),
+            relation_codes: default_relation_codes(),
         }
     }
 }
@@ -190,9 +250,7 @@ pub fn compute_stats(text: &str) -> DocStats {
 // ── Wasm Exports ──
 
 #[wasm_bindgen]
-pub fn parse_to_spans_wasm(text: &str, rules_json: &str, accent_json: &str) -> Result<JsValue, JsValue> {
-    let mut rules: Vec<HighlightRule> = serde_json::from_str(rules_json)
-        .map_err(|e| JsValue::from_str(&format!("Regex parse error: {}", e)))?;
+pub fn parse_to_spans_wasm(text: &str, accent_json: &str) -> Result<JsValue, JsValue> {
     let ctx: serde_json::Value = serde_json::from_str(accent_json).unwrap_or_default();
     let acc_r = ctx["accent_hl"][0].as_u64().unwrap_or(180) as u8;
     let acc_g = ctx["accent_hl"][1].as_u64().unwrap_or(160) as u8;
@@ -202,10 +260,20 @@ pub fn parse_to_spans_wasm(text: &str, rules_json: &str, accent_json: &str) -> R
     let txt_g = ctx["text_main"][1].as_u64().unwrap_or(30) as u8;
     let txt_b = ctx["text_main"][2].as_u64().unwrap_or(30) as u8;
 
-    // Compile rules
-    for r in &mut rules { r.compile(); }
+    let mut level_colors = default_level_colors();
+    if let Some(arr) = ctx["level_colors"].as_array() {
+        for (i, v) in arr.iter().enumerate().take(6) {
+            level_colors[i] = [
+                v[0].as_u64().unwrap_or(0) as u8,
+                v[1].as_u64().unwrap_or(0) as u8,
+                v[2].as_u64().unwrap_or(0) as u8
+            ];
+        }
+    }
 
-    let mut spans = parse_markdown_to_spans(text, &rules, [acc_r, acc_g, acc_b], [txt_r, txt_g, txt_b]);
+    let hide_labels = ctx["hide_labels"].as_bool().unwrap_or(false);
+
+    let mut spans = parse_markdown_to_spans(text, &level_colors, [acc_r, acc_g, acc_b], [txt_r, txt_g, txt_b], hide_labels);
     
     // Map byte offsets to UTF-16 code unit offsets for VS Code
     let len = text.len();
@@ -227,13 +295,38 @@ pub fn parse_to_spans_wasm(text: &str, rules_json: &str, accent_json: &str) -> R
 }
 
 #[wasm_bindgen]
+pub fn extract_semantic_labels_wasm(text: &str) -> Result<JsValue, JsValue> {
+    let labels = extract_semantic_labels(text);
+    Ok(serde_wasm_bindgen::to_value(&labels)
+        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))?)
+}
+
+#[wasm_bindgen]
+pub fn strip_labels_wasm(text: &str) -> String {
+    strip_labels(text)
+}
+
+#[wasm_bindgen]
 pub fn get_default_theme_json() -> String {
     serde_json::to_string(&ZqTheme::default()).unwrap_or_default()
 }
 
+#[wasm_bindgen]
+pub fn parse_semantic_labels_wasm(text: &str) -> Result<JsValue, JsValue> {
+    let labels = label::parse_semantic_labels(text);
+    Ok(serde_wasm_bindgen::to_value(&labels)
+        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))?)
+}
+
+#[wasm_bindgen]
+pub fn strip_semantic_labels_wasm(text: &str) -> String {
+    let labels = label::parse_semantic_labels(text);
+    label::strip_semantic_labels(text, &labels)
+}
+
 // ── Portable Highlighting ──
 
-pub fn parse_markdown_to_spans(text: &str, rules: &[HighlightRule], theme_accent: [u8; 3], theme_text: [u8; 3]) -> Vec<StyledSpan> {
+pub fn parse_markdown_to_spans(text: &str, level_colors: &[[u8; 3]], theme_accent: [u8; 3], _theme_text: [u8; 3], hide_labels: bool) -> Vec<StyledSpan> {
     use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 
     let len = text.len();
@@ -245,17 +338,26 @@ pub fn parse_markdown_to_spans(text: &str, rules: &[HighlightRule], theme_accent
     let mut strikes: Vec<bool>            = vec![false; len];
     let mut italics: Vec<bool>            = vec![false; len];
     let mut bolds:   Vec<bool>            = vec![false; len];
+    let mut hiddens: Vec<bool>            = vec![false; len];
 
-    // ── Custom rules ──
-    for rule in rules {
-        if let Some(re) = rule.regex() {
-            let c = rule.color;
-            for mat in re.find_iter(text) {
-                for i in mat.start()..mat.end() {
-                    if rule.is_background { bg[i] = Some(c); } else { fg[i] = Some(c); }
-                    if rule.bold { bolds[i] = true; }
-                }
+    // ── Semantic AST Highlighting ──
+    let labels = label::parse_semantic_labels(text);
+    for label in &labels {
+        if hide_labels {
+            for i in label.start_byte.min(len)..label.end_byte.min(len) {
+                hiddens[i] = true;
             }
+            continue;
+        }
+        
+        let c = if let Some(col) = level_colors.get(label.depth.saturating_sub(1)) {
+            *col
+        } else {
+            level_colors.last().copied().unwrap_or([150, 150, 150])
+        };
+
+        for i in label.start_byte.min(len)..label.end_byte.min(len) {
+            bg[i] = Some(c);
         }
     }
 
@@ -336,7 +438,9 @@ pub fn parse_markdown_to_spans(text: &str, rules: &[HighlightRule], theme_accent
 
     let mut start = 0;
     for i in 1..len {
-        let changed = fg[i] != fg[start] || bg[i] != bg[start] || sizes[i] != sizes[start] || bolds[i] != bolds[start] || italics[i] != italics[start] || strikes[i] != strikes[start];
+        let changed = fg[i] != fg[start] || bg[i] != bg[start] || sizes[i] != sizes[start] 
+            || bolds[i] != bolds[start] || italics[i] != italics[start] || strikes[i] != strikes[start]
+            || hiddens[i] != hiddens[start];
         if changed {
             spans.push(StyledSpan {
                 start, 
@@ -344,6 +448,7 @@ pub fn parse_markdown_to_spans(text: &str, rules: &[HighlightRule], theme_accent
                 fg: fg[start], bg: bg[start],
                 size_mult: sizes[start],
                 bold: bolds[start], italic: italics[start], strikethrough: strikes[start],
+                is_hidden: hiddens[start],
             });
             start = i;
         }
@@ -354,6 +459,7 @@ pub fn parse_markdown_to_spans(text: &str, rules: &[HighlightRule], theme_accent
         fg: fg[start], bg: bg[start],
         size_mult: sizes[start],
         bold: bolds[start], italic: italics[start], strikethrough: strikes[start],
+        is_hidden: hiddens[start],
     });
 
     spans
@@ -363,6 +469,7 @@ pub fn parse_markdown_to_spans(text: &str, rules: &[HighlightRule], theme_accent
 pub struct LangStrings {
     pub app_title: String,
     pub file: String,
+    pub new_file: String,
     pub save: String,
     pub save_as: String,
     pub close_tab: String,
@@ -374,6 +481,8 @@ pub struct LangStrings {
     pub show_settings: String,
     pub files: String,
     pub outline: String,
+    pub semantic: String,
+    pub priority: String,
     pub display_settings: String,
     pub font: String,
     pub font_size: String,
@@ -405,7 +514,27 @@ pub struct LangStrings {
     pub chars: String,
     pub words: String,
     pub labels: String,
+    pub save_rules: String,
+    pub rules_name: String,
+    pub copy_clean: String,
+    pub hide_labels: String,
+    pub structure: String,
+    // Label management
+    #[serde(default = "default_str")]
+    pub labels_tab: String,
+    #[serde(default = "default_str")]
+    pub label_types: String,
+    #[serde(default = "default_str")]
+    pub delimiter: String,
+    #[serde(default = "default_str")]
+    pub add_type: String,
+    #[serde(default = "default_str")]
+    pub type_name: String,
+    #[serde(default = "default_str")]
+    pub description: String,
 }
+
+fn default_str() -> String { String::new() }
 
 impl LangStrings {
     pub fn load(lang: Language) -> Self {

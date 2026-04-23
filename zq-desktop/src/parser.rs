@@ -1,10 +1,14 @@
 use eframe::egui::text::{LayoutJob, TextFormat};
 use eframe::egui::{Color32, FontId, FontFamily};
 pub use zq_core::{
-    HighlightRule, StyledSpan, DocStats, compute_stats, parse_markdown_to_spans, 
-    ZqTheme, DisplayPrefs, Language, BaseTheme, LangStrings, get_strings,
-    HighlightRuleSet, extract_headings, deserialize_zq_file, serialize_zq_file,
-    ZQ_META_PREFIX, ZQ_META_SUFFIX
+    StyledSpan, compute_stats, parse_markdown_to_spans,
+    ZqTheme, DisplayPrefs, Language, BaseTheme, get_strings, LangStrings,
+    extract_headings,
+    deserialize_zq_file, serialize_zq_file,
+    LabelType, SemanticLabel, TagCode, RelationCode,
+    parse_semantic_labels, parse_semantic_labels_with_delim, group_labels_by_category,
+    strip_semantic_labels, auto_register_labels, get_label_color,
+    ZqTemplate, validate_document,
 };
 
 pub fn render_to_job(
@@ -19,10 +23,11 @@ pub fn render_to_job(
     if len == 0 { return job; }
 
     for span in spans {
+        if span.is_hidden { continue; }
         let s = span.start.min(len);
         let e = span.end.min(len);
         let text_segment = &text[s..e];
-        
+
         let mut fmt = TextFormat {
             font_id: FontId::new(font_size * span.size_mult, font_family.clone()),
             color: span.fg.map(|c| Color32::from_rgb(c[0], c[1], c[2])).unwrap_or(default_color),

@@ -1,6 +1,7 @@
 {
   "app_title": "竹签 ZhuQian",
   "file": "文件",
+  "new_file": "  新建文件  Ctrl+N",
   "save": "  保存  Ctrl+S",
   "save_as": "  另存为...",
   "close_tab": "  关闭标签页",
@@ -12,6 +13,8 @@
   "show_settings": "  显示设置",
   "files": "文件",
   "outline": "大纲",
+  "semantic": "语义",
+  "priority": "优先级",
   "display_settings": "显示设置",
   "font": "字体",
   "font_size": "字号",
@@ -42,5 +45,16 @@
   "lines": "行",
   "chars": "字",
   "words": "词",
-  "labels": "签"
+  "labels": "签",
+  "save_rules": "保存规则集",
+  "rules_name": "规则集名称",
+  "copy_clean": "  复制纯文本  Ctrl+Shift+C",
+  "hide_labels": "隐藏标签",
+  "structure": "结构",
+  "labels_tab": "标签",
+  "label_types": "标签类型",
+  "delimiter": "定界符",
+  "add_type": "添加类型",
+  "type_name": "类型名",
+  "description": "说明"
 }

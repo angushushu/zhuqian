@@ -1,0 +1,70 @@
+    Checking zq-core v0.1.0 (C:\Users\Angus\Desktop\zhuqian\zq-core)
+    Checking zhuqian v0.1.1 (C:\Users\Angus\Desktop\zhuqian\zq-desktop)
+error[E0502]: cannot borrow `*self.prefs` as immutable because it is also borrowed as mutable
+   --> zq-desktop\src\main.rs:875:55
+    |
+868 | ...                   let rule = &mut self.prefs.theme.highlight_rules[i];
+    |                                       -------------------------------- mutable borrow occurs here
+...
+875 | ...                   ui.horizontal(|ui| {
+    |                                     ^^^^ immutable borrow occurs here
+...
+878 | ...                           save_global_config(&self.prefs);
+    |                                                   ---------- second borrow occurs due to use of `*self.prefs` in closure
+...
+884 | ...                           rule.color = [(c[0]*255.0) as u8, (c[1]*255.0) as u8, (c[2]*255.0) as u8];
+    |                               ---------- mutable borrow later captured here by closure
+
+error[E0502]: cannot borrow `*self.prefs` as immutable because it is also borrowed as mutable
+   --> zq-desktop\src\main.rs:881:55
+    |
+868 | ...                   let rule = &mut self.prefs.theme.highlight_rules[i];
+    |                                       -------------------------------- mutable borrow occurs here
+...
+881 | ...                   ui.horizontal(|ui| {
+    |                                     ^^^^ immutable borrow occurs here
+...
+884 | ...                           rule.color = [(c[0]*255.0) as u8, (c[1]*255.0) as u8, (c[2]*255.0) as u8];
+    |                               ---------- mutable borrow later captured here by closure
+885 | ...                           save_global_config(&self.prefs);
+    |                                                   ---------- second borrow occurs due to use of `*self.prefs` in closure
+
+warning: variable does not need to be mutable
+    --> zq-desktop\src\main.rs:1001:25
+     |
+1001 |                     let mut text_edit = egui::TextEdit::multiline(&mut tab.text)
+     |                         ----^^^^^^^^^
+     |                         |
+     |                         help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> zq-desktop\src\main.rs:977:21
+    |
+977 |                 let mut scroll_area = egui::ScrollArea::vertical();
+    |                     ----^^^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+error[E0382]: use of moved value: `s.save`
+   --> zq-desktop\src\main.rs:697:28
+    |
+433 |             .show(ctx, |ui| {
+    |                        ---- value moved into closure here
+...
+449 |                     if ui.button(s.save).clicked() {
+    |                                  ------ variable moved due to use in closure
+...
+697 |                 .show(ctx, |ui| {
+    |                            ^^^^ value used here after move
+...
+909 |                                         if ui.button(s.save).clicked() && !self.new_hl_set_name.is_empty() {
+    |                                                      ------ use occurs due to use in closure
+    |
+    = note: move occurs because `s.save` has type `std::string::String`, which does not implement the `Copy` trait
+
+Some errors have detailed explanations: E0382, E0502.
+For more information about an error, try `rustc --explain E0382`.
+warning: `zhuqian` (bin "zhuqian") generated 2 warnings
+error: could not compile `zhuqian` (bin "zhuqian") due to 3 previous errors; 2 warnings emitted

@@ -1,8 +1,8 @@
 {
   "name": "zhuqian",
   "displayName": "ZhuQian",
-  "description": "Real-time labels and highlighting for ZhuQian format",
-  "version": "0.1.0",
+  "description": "Real-time labels highlighting for structured writing",
+  "version": "0.1.1",
   "publisher": "angushushu",
   "icon": "icon.png",
   "repository": {
@@ -35,7 +35,7 @@
       }
     ],
     "configuration": {
-      "title": "ZhuQian",
+      "title": "ZhuQian (Custom Panel: [Open Settings](command:zhuqian.openSettings))",
       "properties": {
         "zhuqian.accentColorUi": {
           "type": "string",
@@ -76,7 +76,12 @@
         "zhuqian.fontSize": {
           "type": "number",
           "default": 16,
-          "description": "Base font size for ZhuQian (Note: limited support in VS Code decorations)"
+          "description": "Base font size for ZhuQian (Applied as [zq] language setting)"
+        },
+        "zhuqian.fontFamily": {
+          "type": "string",
+          "default": "serif",
+          "description": "Font family for ZhuQian (Applied as [zq] language setting)"
         },
         "zhuqian.markdownRender": {
           "type": "boolean",
@@ -92,6 +97,23 @@
           "type": "boolean",
           "default": true,
           "description": "Enable or disable ZhuQian real-time syntax highlighting and labels."
+        },
+        "zhuqian.hideLabels": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide semantic labels visually in the editor while keeping them in the text."
+        },
+        "zhuqian.levelColors": {
+          "type": "array",
+          "default": [
+            [230, 80, 80],
+            [80, 200, 80],
+            [80, 80, 230],
+            [230, 180, 50],
+            [180, 80, 200],
+            [80, 200, 200]
+          ],
+          "description": "Background colors for semantic label levels 1–6 (each item is an [R, G, B] array, 0–255)."
         }
       }
     },
@@ -105,6 +127,16 @@
         "command": "zhuqian.toggle",
         "title": "ZhuQian: Toggle Rendering",
         "category": "ZhuQian"
+      },
+      {
+        "command": "zhuqian.copyCleanText",
+        "title": "ZhuQian: Copy Clean Text (Remove Labels)",
+        "category": "ZhuQian"
+      },
+      {
+        "command": "zhuqian.toggleHideLabels",
+        "title": "ZhuQian: Toggle Hide Labels (Reading Mode)",
+        "category": "ZhuQian"
       }
     ],
     "keybindings": [
@@ -113,6 +145,18 @@
         "key": "ctrl+alt+z",
         "mac": "cmd+alt+z",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "zhuqian.copyCleanText",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "zhuqian.toggleHideLabels",
+        "key": "ctrl+h",
+        "mac": "cmd+h",
+        "when": "editorTextFocus && resourceExtname == '.zq'"
       }
     ],
     "menus": {

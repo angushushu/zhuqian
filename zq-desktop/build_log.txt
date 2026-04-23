@@ -1,0 +1,37 @@
+    Checking zhuqian v0.1.1 (C:\Users\Angus\Desktop\zhuqian\zq-desktop)
+error[E0061]: this method takes 0 arguments but 1 argument was supplied
+   --> zq-desktop\src\main.rs:648:76
+    |
+648 | ...                   let resp = ui.add(egui::Label::new(rt).wrap(true).sense(egui::Sense::click()));
+    |                                                              ^^^^ ---- unexpected argument of type `bool`
+    |
+note: method defined here
+   --> C:\Users\Angus\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-0.33.3\src\widgets\label.rs:63:12
+    |
+ 63 |     pub fn wrap(mut self) -> Self {
+    |            ^^^^
+help: remove the extra argument
+    |
+648 -                                     let resp = ui.add(egui::Label::new(rt).wrap(true).sense(egui::Sense::click()));
+648 +                                     let resp = ui.add(egui::Label::new(rt).wrap().sense(egui::Sense::click()));
+    |
+
+error[E0061]: this method takes 0 arguments but 1 argument was supplied
+   --> zq-desktop\src\main.rs:660:117
+    |
+660 | ...                   let resp = ui.add(egui::Button::new(header_rt).selected(false).frame(false).wrap(true));
+    |                                                                                                   ^^^^ ---- unexpected argument of type `bool`
+    |
+note: method defined here
+   --> C:\Users\Angus\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-0.33.3\src\widgets\button.rs:125:12
+    |
+125 |     pub fn wrap(self) -> Self {
+    |            ^^^^
+help: remove the extra argument
+    |
+660 -                                         let resp = ui.add(egui::Button::new(header_rt).selected(false).frame(false).wrap(true));
+660 +                                         let resp = ui.add(egui::Button::new(header_rt).selected(false).frame(false).wrap());
+    |
+
+For more information about this error, try `rustc --explain E0061`.
+error: could not compile `zhuqian` (bin "zhuqian") due to 2 previous errors

@@ -1,6 +1,7 @@
 {
   "app_title": "ZhuQian Editor",
   "file": "File",
+  "new_file": "  New File  Ctrl+N",
   "save": "  Save  Ctrl+S",
   "save_as": "  Save As...",
   "close_tab": "  Close Tab",
@@ -12,6 +13,8 @@
   "show_settings": "  Show Settings",
   "files": "Files",
   "outline": "Outline",
+  "semantic": "Semantic",
+  "priority": "Priority",
   "display_settings": "Display Settings",
   "font": "Font",
   "font_size": "Font Size",
@@ -42,5 +45,16 @@
   "lines": "Ln",
   "chars": "Ch",
   "words": "Wd",
-  "labels": "Lb"
+  "labels": "Lb",
+  "save_rules": "Save Rules",
+  "rules_name": "Rules Name",
+  "copy_clean": "  Copy Clean Text  Ctrl+Shift+C",
+  "hide_labels": "Hide Labels",
+  "structure": "Structure",
+  "labels_tab": "Labels",
+  "label_types": "Label Types",
+  "delimiter": "Delimiter",
+  "add_type": "Add Type",
+  "type_name": "Type Name",
+  "description": "Description"
 }

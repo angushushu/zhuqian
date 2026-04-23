@@ -80,7 +80,7 @@ impl LangStrings {
             show_settings: "  显示设置",
             files: "文件",
             outline: "大纲",
-            display_settings: "— 显示设置 —",
+            display_settings: "显示设置",
             font: "字体",
             font_size: "字号",
             editor_bg: "编辑器背景",
@@ -98,12 +98,12 @@ impl LangStrings {
             selected_file_color: "选中文件",
             status_bar_color: "状态栏",
             markdown_render: "Markdown 渲染",
-            theme_section: "— 主题 —",
+            theme_section: "主题",
             load_theme: "载入主题...",
             save_theme: "保存主题",
             delete_theme: "删除主题",
             theme_name: "主题名",
-            highlight_rules: "— 高亮规则 —",
+            highlight_rules: "高亮规则",
             new_rule: "+ 新规则",
             add: "添加",
             bg_image: "背景图片",
@@ -134,7 +134,7 @@ impl LangStrings {
             show_settings: "  Show Settings",
             files: "Files",
             outline: "Outline",
-            display_settings: "— Display Settings —",
+            display_settings: "Display Settings",
             font: "Font",
             font_size: "Font Size",
             editor_bg: "Editor BG",
@@ -152,12 +152,12 @@ impl LangStrings {
             selected_file_color: "Selected File",
             status_bar_color: "Status Bar",
             markdown_render: "Markdown Render",
-            theme_section: "— Theme —",
+            theme_section: "Theme",
             load_theme: "Load Theme...",
             save_theme: "Save Theme",
             delete_theme: "Delete Theme",
             theme_name: "Theme Name",
-            highlight_rules: "— Highlight Rules —",
+            highlight_rules: "Highlight Rules",
             new_rule: "+ New Rule",
             add: "Add",
             bg_image: "Background Image",
@@ -1027,7 +1027,7 @@ impl eframe::App for ZhuQianEditor {
 
                     // ── Color Pickers ──
                     ui.add_space(6.0);
-                    ui.label(egui::RichText::new("— 颜色 Colors —").size(13.0).color(accent_col));
+                    ui.label(egui::RichText::new("颜色 Colors").size(13.0).color(accent_col));
                     ui.add(egui::Separator::default().spacing(4.0));
 
                     macro_rules! color_row {
