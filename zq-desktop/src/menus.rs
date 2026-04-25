@@ -198,7 +198,7 @@ pub(crate) fn render_tab_bar(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                             app.handle_command(crate::app::EditorCommand::ToggleCommandPalette, ctx);
                         }
                         ui.add_space(8.0);
-                        let btn_text = if app.split_right_tab.is_some() { "◫ 合并" } else { "◫ 分屏" };
+                        let btn_text = if app.split_right_tab.is_some() { "🗗 合并" } else { "🗗 分屏" };
                         let btn = ui.add(egui::Button::new(egui::RichText::new(btn_text).size(12.0).color(text_side)).fill(bg_side));
                         if btn.on_hover_text("并排比对不同的文件 (Ctrl+\\)").clicked() {
                             app.handle_command(crate::app::EditorCommand::ToggleSplitRight, ctx);

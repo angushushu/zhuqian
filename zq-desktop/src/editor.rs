@@ -86,7 +86,49 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                     ui.painter().layout_job(job)
                 };
 
-                let scroll_area = egui::ScrollArea::vertical().id_salt(format!("scroll_{}", id_suffix));
+                let scroll_id = egui::Id::new(format!("scroll_{}", id_suffix));
+
+                // Calculate minimap rect before ScrollArea so we can position the scrollbar there
+                let pane_rect = ui.max_rect();
+                let mm_w = 34.0;
+                let mm_margin = 8.0;
+                let mm_scrollbar_rect = if !prefs.zen_mode {
+                    let r = egui::Rect::from_min_max(
+                        egui::pos2(pane_rect.right() - mm_w - mm_margin, pane_rect.top() + 4.0),
+                        egui::pos2(pane_rect.right() - mm_margin, pane_rect.bottom() - 4.0)
+                    );
+                    Some(r)
+                } else {
+                    None
+                };
+
+                // Customize scrollbar style: floating, wide, semi-transparent to overlay minimap
+                let prev_scroll_style = ui.spacing_mut().scroll;
+                if mm_scrollbar_rect.is_some() {
+                    let mut mm_scroll_style = egui::style::ScrollStyle::floating();
+                    mm_scroll_style.bar_width = mm_w;
+                    mm_scroll_style.floating_width = mm_w;
+                    mm_scroll_style.floating_allocated_width = 0.0;
+                    mm_scroll_style.bar_inner_margin = 0.0;
+                    mm_scroll_style.foreground_color = false;
+                    mm_scroll_style.dormant_background_opacity = 0.0;
+                    mm_scroll_style.active_background_opacity = 0.0;
+                    mm_scroll_style.interact_background_opacity = 0.1;
+                    mm_scroll_style.dormant_handle_opacity = 0.25;
+                    mm_scroll_style.active_handle_opacity = 0.35;
+                    mm_scroll_style.interact_handle_opacity = 0.5;
+                    ui.spacing_mut().scroll = mm_scroll_style;
+                }
+
+                let mut scroll_area = egui::ScrollArea::vertical()
+                    .id_salt(scroll_id)
+                    .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible);
+                if let Some(r) = mm_scrollbar_rect {
+                    scroll_area = scroll_area.scroll_bar_rect(r);
+                }
+                if let Some(target_y) = tab.scroll_target_y.take() {
+                    scroll_area = scroll_area.vertical_scroll_offset(target_y);
+                }
                 let editor_id = egui::Id::new(id_suffix);
 
                 if is_focused_pane {
@@ -100,22 +142,10 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                         egui::TextEdit::store_state(ctx, editor_id, state);
                         
                         *scroll_to_byte = None;
-                        *scroll_to_line = None;
                         *just_jumped = true;
-                    } else if let Some(target_ln) = *scroll_to_line {
-                        let mut current_pos = 0;
-                        for (i, line) in tab.text.lines().enumerate() {
-                            if i + 1 == target_ln {
-                                let mut state = egui::text_edit::TextEditState::load(ctx, editor_id).unwrap_or_default();
-                                let ccursor = egui::text::CCursor::new(current_pos);
-                                state.cursor.set_char_range(Some(egui::text::CCursorRange::one(ccursor)));
-                                egui::TextEdit::store_state(ctx, editor_id, state);
-                                break;
-                            }
-                            current_pos += line.len() + 1; // +1 for \n
-                        }
-                        *scroll_to_line = None;
-                        *just_jumped = true;
+                    }
+                    if let Some(_target_ln) = *scroll_to_line {
+                        // We handle this after the text edit to use the galley for scrolling
                     }
                 }
 
@@ -128,7 +158,7 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                 let mm_relation_codes = prefs.relation_codes.clone();
 
                 let avail = ui.available_width();
-                let min_margin = 48.0;
+                let min_margin = if prefs.zen_mode { 48.0 } else { 64.0 };
                 let canvas_width = if prefs.zen_mode {
                     800.0f32.min(avail - min_margin * 2.0)
                 } else {
@@ -136,11 +166,12 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                 };
 
                 // 1. Outer ScrollArea for global scrollbar
-                scroll_area.show(ui, |ui| {
+                let sa_out = scroll_area.show(ui, |ui| {
                     ui.set_min_width(ui.available_width());
                     ui.horizontal_top(|ui| {
+                        ui.spacing_mut().item_spacing.x = 0.0;
                         // 2. Centered Editor Column
-                        let res = ui.vertical_centered(|ui| {
+                        ui.vertical_centered(|ui| {
                             ui.set_max_width(canvas_width);
 
                             let text_to_edit = &mut tab.text;
@@ -184,10 +215,51 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                             if resp.gained_focus() {
                                 *active_pane = pane_type;
                             }
+                            // Handle Jump-to-Line Request (from Sidebar or Minimap)
+                            if pane_type == *active_pane {
+                                if let Some(target_ln) = *scroll_to_line {
+                                    let galley = out.galley.clone();
+                                    let mut target_ccursor;
+
+                                    if *just_jumped {
+                                        // scroll_to_byte already positioned the cursor precisely
+                                        // Use current cursor position for scroll calculation
+                                        let state = egui::text_edit::TextEditState::load(ctx, editor_id).unwrap_or_default();
+                                        target_ccursor = if let Some(crange) = state.cursor.char_range() {
+                                            crange.primary
+                                        } else {
+                                            egui::text::CCursor::new(0)
+                                        };
+                                    } else {
+                                        // Only scroll_to_line was set — position cursor at line start
+                                        let mut current_pos = 0;
+                                        target_ccursor = egui::text::CCursor::new(0);
+                                        for (i, line) in tab.text.lines().enumerate() {
+                                            if i + 1 == target_ln {
+                                                let ccursor = egui::text::CCursor::new(current_pos);
+                                                let mut state = egui::text_edit::TextEditState::load(ctx, editor_id).unwrap_or_default();
+                                                state.cursor.set_char_range(Some(egui::text::CCursorRange::one(ccursor)));
+                                                egui::TextEdit::store_state(ctx, editor_id, state);
+                                                target_ccursor = ccursor;
+                                                break;
+                                            }
+                                            current_pos += line.len() + 1;
+                                        }
+                                    }
+
+                                    let pos = galley.pos_from_cursor(target_ccursor);
+                                    let target_y = (pos.min.y - ui.available_height() / 2.0).max(0.0);
+                                    tab.scroll_target_y = Some(target_y);
+                                    
+                                    *scroll_to_line = None;
+                                    *just_jumped = true;
+                                    resp.request_focus();
+                                    ctx.request_repaint();
+                                }
+                            }
 
                             if is_focused_pane && *just_jumped {
                                 resp.request_focus();
-                                resp.scroll_to_me(None);
                                 *just_jumped = false;
                             }
 
@@ -265,64 +337,104 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                                 *ac_mode = AutocompleteMode::None;
                             }
 
-                            (out, resp)
-                        });
+                                (out, resp)
+                            }).inner
+                        }).inner
+                });
 
-                        let (out, resp) = res.inner;
+                let (out, _resp) = sa_out.inner;
 
-                        // 3. Minimap (to the right of editor, inside ScrollArea)
-                        let minimap_w = 36.0;
+                // Restore previous scrollbar style
+                ui.spacing_mut().scroll = prev_scroll_style;
+
+                // Build line-to-pixel-Y mapping from galley (used for click-to-line targeting)
+                let galley = &out.galley;
+                let content_h = sa_out.content_size.y;
+
+                // Map each text line (1-based) to its pixel Y position via galley
+                let mut line_pixel_ys: Vec<f32> = Vec::new();
+                {
+                    let mut char_offset = 0;
+                    for (_i, line_text) in tab.text.lines().enumerate() {
+                        let ccursor = egui::text::CCursor::new(char_offset);
+                        let pos = galley.pos_from_cursor(ccursor);
+                        line_pixel_ys.push(pos.min.y);
+                        char_offset += line_text.chars().count() + 1; // +1 for '\n'
+                    }
+                    if line_pixel_ys.is_empty() {
+                        line_pixel_ys.push(0.0);
+                    }
+                }
+
+                // Helper: convert a logical line number (1-based) to minimap Y ratio (0.0..1.0)
+                let line_to_mm_ratio = |ln: usize| -> f32 {
+                    if content_h > 0.0 && ln > 0 && ln <= line_pixel_ys.len() {
+                        line_pixel_ys[ln - 1] / content_h
+                    } else {
+                        0.0
+                    }
+                };
+
+                // 3. Fixed Minimap Overlay (Outside ScrollArea)
+                if let Some(mm_rect) = mm_scrollbar_rect {
+                    if total_lines_mm > 0 {
+                        let mm_h = mm_rect.height();
+
                         let mm_bg = egui::Color32::from_rgb(prefs.theme.bg_main[0], prefs.theme.bg_main[1], prefs.theme.bg_main[2]);
                         let mm_text = egui::Color32::from_rgb(prefs.theme.text_main[0], prefs.theme.text_main[1], prefs.theme.text_main[2]);
-                        let mm_accent = egui::Color32::from_rgb(prefs.theme.accent_hl[0], prefs.theme.accent_hl[1], prefs.theme.accent_hl[2]);
-                        let minimap_h = ui.available_height().min(400.0);
 
-                        if !prefs.zen_mode && minimap_h > 50.0 {
-                            let (minimap_rect, minimap_resp) = ui.allocate_exact_size(
-                                egui::vec2(minimap_w, minimap_h),
-                                egui::Sense::click(),
-                            );
-                            let painter = ui.painter().with_clip_rect(minimap_rect);
-                            painter.rect_filled(minimap_rect, 2.0, mm_bg.gamma_multiply(0.5));
+                        ui.allocate_ui_at_rect(mm_rect, |ui| {
+                            let rect = ui.max_rect();
+                            let mm_resp = ui.interact(rect, ui.id(), egui::Sense::click());
+                            let painter = ui.painter().with_clip_rect(rect);
+                            painter.rect_filled(rect, 4.0, mm_bg.gamma_multiply(0.2));
 
+                            let mm_padding = 8.0;
+                            let mm_draw_h = mm_h - mm_padding * 2.0;
+
+                            // Render headings using pixel-based positioning
                             for (ln, lv, _title) in &mm_headings {
-                                let y = minimap_rect.top() + (*ln as f32 / total_lines_mm as f32) * minimap_h;
+                                let ratio = line_to_mm_ratio(*ln);
+                                let y = rect.top() + mm_padding + ratio * mm_draw_h;
                                 let bar_h = 2.0;
-                                let bar_w = minimap_w * (0.3 + 0.15 * (*lv as f32).min(4.0));
-                                let bar_x = minimap_rect.left() + (minimap_w - bar_w) / 2.0;
-                                painter.rect_filled(egui::Rect::from_min_max(egui::pos2(bar_x, y), egui::pos2(bar_x + bar_w, y + bar_h)), 0.0, mm_text.gamma_multiply(0.3));
+                                let bar_w = mm_w * (0.3 + 0.15 * (*lv as f32).min(4.0));
+                                let bar_x = rect.left() + (mm_w - bar_w) / 2.0;
+                                painter.rect_filled(egui::Rect::from_min_max(egui::pos2(bar_x, y), egui::pos2(bar_x + bar_w, y + bar_h)), 0.0, mm_text.gamma_multiply(0.25));
                             }
 
+                            // Render labels using pixel-based positioning
                             for label in &mm_labels {
-                                let y = minimap_rect.top() + (label.line as f32 / total_lines_mm as f32) * minimap_h;
-                                let cat_color = parser::get_label_color(&label.category, &mm_label_types, mm_accent_ui);
-                                let dot_color = egui::Color32::from_rgb(cat_color[0], cat_color[1], cat_color[2]);
-                                painter.circle_filled(egui::pos2(minimap_rect.center().x, y), 3.0, dot_color);
+                                let ratio = line_to_mm_ratio(label.line);
+                                let y = rect.top() + mm_padding + ratio * mm_draw_h;
+                                
+                                let depth_idx = label.depth.saturating_sub(1) % prefs.theme.level_colors.len();
+                                let d_c = prefs.theme.level_colors[depth_idx];
+                                let depth_color = egui::Color32::from_rgb(d_c[0], d_c[1], d_c[2]);
+                                
+                                painter.circle_filled(egui::pos2(rect.center().x, y), 2.5, depth_color);
                             }
 
-                            if minimap_resp.clicked() {
-                                if let Some(pos) = minimap_resp.interact_pointer_pos() {
-                                    let click_y = pos.y - minimap_rect.top();
-                                    let target_line = ((click_y / minimap_h) * total_lines_mm as f32).max(1.0) as usize;
-                                    *scroll_to_line = Some(target_line);
+                            // Click-to-scroll: use pixel-based ratio for accurate targeting
+                            if mm_resp.clicked() {
+                                if let Some(pos) = mm_resp.interact_pointer_pos() {
+                                    let click_y = pos.y - rect.top() - mm_padding;
+                                    let click_ratio = (click_y / mm_draw_h).clamp(0.0, 1.0);
+                                    let target_pixel_y = click_ratio * content_h;
+                                    let mut best_line = 1;
+                                    let mut best_dist = f32::MAX;
+                                    for (i, &py) in line_pixel_ys.iter().enumerate() {
+                                        let dist = (py - target_pixel_y).abs();
+                                        if dist < best_dist {
+                                            best_dist = dist;
+                                            best_line = i + 1;
+                                        }
+                                    }
+                                    *scroll_to_line = Some(best_line);
                                 }
                             }
-
-                            // Viewport indicator
-                            let current_line_mm = if let Some(state) = egui::text_edit::TextEditState::load(ctx, editor_id) {
-                                if let Some(crange) = state.cursor.char_range() {
-                                    let c_idx = crange.primary.index;
-                                    let byte_pos = tab.text.char_indices().nth(c_idx).map(|(i, _)| i).unwrap_or(tab.text.len());
-                                    tab.text[..byte_pos].lines().count() + 1
-                                } else { 0 }
-                            } else { 0 };
-
-                            if current_line_mm > 0 {
-                                let vy = minimap_rect.top() + (current_line_mm as f32 / total_lines_mm as f32) * minimap_h;
-                                let viewport_h = (minimap_h / total_lines_mm as f32 * 20.0).max(6.0).min(minimap_h);
-                                painter.rect_stroke(egui::Rect::from_min_max(egui::pos2(minimap_rect.left() + 1.0, vy - viewport_h / 2.0), egui::pos2(minimap_rect.right() - 1.0, vy + viewport_h / 2.0)), 1.0, egui::Stroke::new(1.0, mm_accent.gamma_multiply(0.6)), egui::epaint::StrokeKind::Outside);
-                            }
-                        }
+                        });
+                    }
+                }
 
                         // Render autocomplete popup in a floating area
                         if is_focused_pane && *ac_mode != AutocompleteMode::None {
@@ -405,8 +517,6 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                                 }
                             }
                         }
-                    });
-                });
 
                 // === Label Relations Panel (below editor) ===
                 if is_focused_pane {

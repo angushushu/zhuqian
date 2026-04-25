@@ -177,12 +177,37 @@ fn render_colors_tab(app: &mut ZhuQianEditor, ctx: &egui::Context, ui: &mut egui
             }
         });
         ui.add_space(16.0);
-        ui.label(egui::RichText::new(if app.prefs.language == Language::Zh { "语义层级颜色" } else { "Semantic Level Colors" }).size(11.0).color(accent_ui));
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new(if app.prefs.language == Language::Zh { "语义层级颜色" } else { "Semantic Level Colors" }).size(11.0).color(accent_ui));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("+").on_hover_text("Add Level").clicked() {
+                    app.prefs.theme.level_colors.push([128, 128, 128]);
+                }
+            });
+        });
         ui.add_space(8.0);
         
+        let mut to_remove_level = None;
         for i in 0..app.prefs.theme.level_colors.len() {
             let label = format!("Level {}", i + 1);
-            color_row!(&label, app.prefs.theme.level_colors[i]);
+            ui.horizontal(|ui| {
+                let mut color = egui::Color32::from_rgb(app.prefs.theme.level_colors[i][0], app.prefs.theme.level_colors[i][1], app.prefs.theme.level_colors[i][2]);
+                if ui.color_edit_button_srgba(&mut color).changed() {
+                    app.prefs.theme.level_colors[i] = [color.r(), color.g(), color.b()];
+                }
+                ui.label(egui::RichText::new(&label).size(11.0).color(text_side));
+                
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.add(egui::Button::new(egui::RichText::new("×").size(10.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
+                        to_remove_level = Some(i);
+                    }
+                });
+            });
+        }
+        if let Some(idx) = to_remove_level {
+            if app.prefs.theme.level_colors.len() > 1 {
+                app.prefs.theme.level_colors.remove(idx);
+            }
         }
     });
 }

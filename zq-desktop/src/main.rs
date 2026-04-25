@@ -45,11 +45,24 @@ fn main() -> eframe::Result {
                 .find(|k| fonts.font_data.contains_key(**k))
                 .map(|k| k.to_string());
             if let Some(ref cjk) = cjk_key {
+                let fallbacks = [
+                    cjk.as_str(),
+                    "seguiemj", 
+                    "segoeuiemoji", 
+                    "seguisym",
+                    "msyh", 
+                    "simsun", 
+                    "arial unicode ms",
+                    "noto sans cjk sc",
+                    "noto color emoji"
+                ];
                 let all_families: Vec<egui::FontFamily> = fonts.families.keys().cloned().collect();
                 for family in all_families {
                     if let Some(list) = fonts.families.get_mut(&family) {
-                        if !list.contains(cjk) {
-                            list.push(cjk.clone());
+                        for f in fallbacks {
+                            if fonts.font_data.contains_key(f) && !list.contains(&f.to_string()) {
+                                list.push(f.to_string());
+                            }
                         }
                     }
                 }

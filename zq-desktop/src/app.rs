@@ -47,6 +47,7 @@ pub(crate) struct TabData {
     pub is_dirty: bool,
     pub display_text: String,
     pub last_cleaned_text: String,
+    pub scroll_target_y: Option<f32>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -126,6 +127,7 @@ impl ZhuQianEditor {
                     is_dirty: false,
                     display_text: String::new(),
                     last_cleaned_text: String::new(),
+                    scroll_target_y: None,
                 });
             }
         }
@@ -134,7 +136,7 @@ impl ZhuQianEditor {
         if tabs.is_empty() {
             if let Some(first) = files.first() {
                 let (text, _) = load_file(first);
-                tabs.push(TabData { path: Some(first.clone()), text, is_dirty: false, display_text: String::new(), last_cleaned_text: String::new() });
+                tabs.push(TabData { path: Some(first.clone()), text, is_dirty: false, display_text: String::new(), last_cleaned_text: String::new(), scroll_target_y: None });
             }
         }
 
@@ -235,7 +237,7 @@ impl ZhuQianEditor {
             self.active_template = crate::parser::ZqTemplate::freeform();
         }
 
-        self.tabs.push(TabData { path: Some(path.clone()), text, is_dirty: false, display_text: String::new(), last_cleaned_text: String::new() });
+        self.tabs.push(TabData { path: Some(path.clone()), text, is_dirty: false, display_text: String::new(), last_cleaned_text: String::new(), scroll_target_y: None });
         self.active_tab = self.tabs.len() - 1;
         self.save_current_session();
     }
@@ -256,6 +258,7 @@ impl ZhuQianEditor {
             is_dirty: false,
             display_text: String::new(),
             last_cleaned_text: String::new(),
+            scroll_target_y: None,
         });
         self.active_tab = self.tabs.len() - 1;
         self.save_current_session();

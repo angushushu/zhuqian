@@ -27,10 +27,10 @@ pub(crate) fn render_sidebar(app: &mut ZhuQianEditor, ctx: &egui::Context) {
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing.x = 4.0;
                 let w = 28.0;
-                if ui.add_sized([w, 24.0], egui::SelectableLabel::new(app.sidebar_mode == SidebarMode::FileTree, "🗂")).on_hover_text(&s.files).clicked() { app.sidebar_mode = SidebarMode::FileTree; }
-                if ui.add_sized([w, 24.0], egui::SelectableLabel::new(app.sidebar_mode == SidebarMode::Outline, "🌳")).on_hover_text(&s.outline).clicked() { app.sidebar_mode = SidebarMode::Outline; }
+                if ui.add_sized([w, 24.0], egui::SelectableLabel::new(app.sidebar_mode == SidebarMode::FileTree, "📁")).on_hover_text(&s.files).clicked() { app.sidebar_mode = SidebarMode::FileTree; }
+                if ui.add_sized([w, 24.0], egui::SelectableLabel::new(app.sidebar_mode == SidebarMode::Outline, "☰")).on_hover_text(&s.outline).clicked() { app.sidebar_mode = SidebarMode::Outline; }
                 if ui.add_sized([w, 24.0], egui::SelectableLabel::new(app.sidebar_mode == SidebarMode::Semantic, "🏷")).on_hover_text(&s.semantic).clicked() { app.sidebar_mode = SidebarMode::Semantic; }
-                if ui.add_sized([w, 24.0], egui::SelectableLabel::new(app.sidebar_mode == SidebarMode::LogicGraph, "🕸")).on_hover_text(&s.logic_topology).clicked() { app.sidebar_mode = SidebarMode::LogicGraph; }
+                if ui.add_sized([w, 24.0], egui::SelectableLabel::new(app.sidebar_mode == SidebarMode::LogicGraph, "🔗")).on_hover_text(&s.logic_topology).clicked() { app.sidebar_mode = SidebarMode::LogicGraph; }
 
                 ui.add_space(4.0);
 
@@ -50,6 +50,17 @@ pub(crate) fn render_sidebar(app: &mut ZhuQianEditor, ctx: &egui::Context) {
             }
         });
 }
+
+fn render_module_header(ui: &mut egui::Ui, title: &str, accent_ui: egui::Color32, actions: impl FnOnce(&mut egui::Ui)) {
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new(title).strong().size(12.0).color(accent_ui));
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), actions);
+    });
+    ui.add_space(2.0);
+    ui.separator();
+    ui.add_space(4.0);
+}
+
 
 fn render_file_tree(app: &mut ZhuQianEditor, ui: &mut egui::Ui, accent_ui: egui::Color32, text_side: egui::Color32) {
     egui::ScrollArea::vertical().show(ui, |ui| {
@@ -127,7 +138,9 @@ fn render_markdown_outline(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side
     // Detect current line
     let current_line = get_current_line(app, ui);
 
+    render_module_header(ui, &s.outline, accent_ui, |_| {});
     render_progress_bar(ui, current_line, total_lines, text_side, accent_ui);
+    ui.add_space(4.0);
 
     egui::ScrollArea::vertical().id_salt("md_outline_scroll").show(ui, |ui| {
         if items.is_empty() {
@@ -292,6 +305,12 @@ fn render_semantic_outline(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side
         }
     }
 
+    render_module_header(ui, &s.semantic, accent_ui, |ui| {
+        if ui.selectable_label(app.show_logic_overlay, "🔗").on_hover_text(&s.logic_links).clicked() { 
+            app.show_logic_overlay = !app.show_logic_overlay; 
+        }
+    });
+
     egui::ScrollArea::vertical().id_salt("semantic_outline_scroll").show(ui, |ui| {
         ui.set_min_width(0.0);
 
@@ -299,15 +318,6 @@ fn render_semantic_outline(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side
             ui.label(egui::RichText::new(&s.empty).size(11.0).color(text_side));
             return;
         }
-
-        ui.horizontal(|ui| {
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.selectable_label(app.show_logic_overlay, "🔗").on_hover_text(&s.logic_links).clicked() { 
-                    app.show_logic_overlay = !app.show_logic_overlay; 
-                }
-            });
-        });
-        ui.add_space(8.0);
 
         // ── Health Check ──
         render_health_check(app, ui, &labels, text_side);
@@ -460,36 +470,40 @@ fn render_health_check(app: &mut ZhuQianEditor, ui: &mut egui::Ui, labels: &[par
         }
     }
 
-    let bar_area_w = ui.available_width();
-    for tag in &app.prefs.tag_codes {
-        let count = *tag_counts.get(&tag.symbol).unwrap_or(&0);
-        let color = egui::Color32::from_rgb((tag.color[0]*255.0) as u8, (tag.color[1]*255.0) as u8, (tag.color[2]*255.0) as u8);
-        ui.horizontal(|ui| {
-            ui.add_sized([12.0, 12.0], egui::Label::new(egui::RichText::new(&tag.symbol).color(color).strong()));
-            let fraction = (count as f32 / labels.len().max(1) as f32).min(1.0);
-            let (rect, _) = ui.allocate_exact_size(egui::vec2(bar_area_w - 20.0, 6.0), egui::Sense::hover());
-            ui.painter().rect_filled(rect, 3.0, text_side.gamma_multiply(0.1));
-            ui.painter().rect_filled(egui::Rect::from_min_max(rect.min, egui::pos2(rect.min.x + (rect.width() * fraction), rect.max.y)), 3.0, color.gamma_multiply(0.8));
-        });
-    }
+    egui::collapsing_header::CollapsingHeader::new(egui::RichText::new("📊 Stats").size(11.0).color(text_side.gamma_multiply(0.6)))
+        .default_open(true)
+        .show(ui, |ui| {
+            let bar_area_w = ui.available_width();
+            for tag in &app.prefs.tag_codes {
+                let count = *tag_counts.get(&tag.symbol).unwrap_or(&0);
+                let color = egui::Color32::from_rgb((tag.color[0]*255.0) as u8, (tag.color[1]*255.0) as u8, (tag.color[2]*255.0) as u8);
+                ui.horizontal(|ui| {
+                    ui.add_sized([12.0, 12.0], egui::Label::new(egui::RichText::new(&tag.symbol).color(color).strong()));
+                    let fraction = (count as f32 / labels.len().max(1) as f32).min(1.0);
+                    let (rect, _) = ui.allocate_exact_size(egui::vec2(bar_area_w - 24.0, 4.0), egui::Sense::hover());
+                    ui.painter().rect_filled(rect, 2.0, text_side.gamma_multiply(0.1));
+                    ui.painter().rect_filled(egui::Rect::from_min_max(rect.min, egui::pos2(rect.min.x + (rect.width() * fraction), rect.max.y)), 2.0, color.gamma_multiply(0.7));
+                });
+            }
 
-    let pos_count = *tag_counts.get("+").unwrap_or(&0);
-    let neg_count = *tag_counts.get("-").unwrap_or(&0);
-    let sub_count = *tag_counts.get("~").unwrap_or(&0);
-    if pos_count > 0 && neg_count == 0 && sub_count == 0 {
-        ui.label(egui::RichText::new("⚠ Argument might be unbalanced.").size(10.0).color(egui::Color32::from_rgb(200, 150, 50)).italics());
-    }
+            let pos_count = *tag_counts.get("+").unwrap_or(&0);
+            let neg_count = *tag_counts.get("-").unwrap_or(&0);
+            let sub_count = *tag_counts.get("~").unwrap_or(&0);
+            if pos_count > 0 && neg_count == 0 && sub_count == 0 {
+                ui.label(egui::RichText::new("⚠ Argument might be unbalanced.").size(10.0).color(egui::Color32::from_rgb(200, 150, 50)).italics());
+            }
 
-    if !questions.is_empty() {
-        ui.add_space(4.0);
-        egui::collapsing_header::CollapsingHeader::new(egui::RichText::new(format!("❓ Pending Verification ({})", questions.len())).color(egui::Color32::from_rgb(200, 180, 80))).show(ui, |ui| {
-            for q in questions {
-                if ui.selectable_label(false, egui::RichText::new(format!("L{}: {}", q.line, q.text)).size(10.0).color(text_side)).clicked() {
-                    app.scroll_to_line = Some(q.line);
-                }
+            if !questions.is_empty() {
+                ui.add_space(4.0);
+                egui::collapsing_header::CollapsingHeader::new(egui::RichText::new(format!("❓ Pending ({})", questions.len())).size(10.0).color(egui::Color32::from_rgb(200, 180, 80))).show(ui, |ui| {
+                    for q in questions {
+                        if ui.selectable_label(false, egui::RichText::new(format!("L{}: {}", q.line, q.text)).size(10.0).color(text_side)).clicked() {
+                            app.scroll_to_line = Some(q.line);
+                        }
+                    }
+                });
             }
         });
-    }
 }
 
 fn render_logic_overlay(app: &ZhuQianEditor, ui: &mut egui::Ui, labels: &[parser::SemanticLabel], node_rects: &std::collections::HashMap<String, egui::Rect>) {
@@ -530,7 +544,11 @@ fn render_logic_graph(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egu
         return;
     }
 
-    ui.add_space(8.0);
+    render_module_header(ui, &s.logic_topology, accent_ui, |ui| {
+        if ui.button("⟲").on_hover_text("Reset Layout").clicked() {
+            app.node_positions.clear();
+        }
+    });
 
     // Both-way scroll for the large graph area
     egui::ScrollArea::both().id_salt("topology_scroll").show(ui, |ui| {
