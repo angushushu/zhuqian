@@ -35,6 +35,7 @@ impl LabelType {
 pub struct SemanticLabel {
     pub depth: usize,
     pub category: String,
+    pub parent_category: Option<String>,
     pub text: String,
     pub properties: Vec<String>,
     pub line: usize,
@@ -64,7 +65,9 @@ pub fn parse_semantic_labels_with_delim(text: &str, open: &str, close: &str) -> 
     let mut labels = Vec::new();
     let open_len = open.len();
 
-    let mut seq_by_depth = [0usize; 10];
+    // 3.2 Algorithm state
+    let mut counters = Vec::new(); // count[depth] -> index 0 corresponds to depth 1
+    let mut id_stack = Vec::new(); // identifier at each depth
 
     for mat in re.find_iter(text) {
         let start = mat.start();
@@ -73,34 +76,70 @@ pub fn parse_semantic_labels_with_delim(text: &str, open: &str, close: &str) -> 
         let line = text[..start].lines().count();
 
         if let Some(caps) = inner_re.captures(inner) {
-            let depth = caps.get(1).map_or(0, |m| m.as_str().len()) + 1; // 0 dots = depth 1, 1 dot = depth 2
-            let mut category = caps.get(2).map_or("", |m| m.as_str().trim()).to_string();
+            // 1. Parse depth and category
+            let leading_dots = caps.get(1).map_or(0, |m| m.as_str().len());
+            let raw_category = caps.get(2).map_or("", |m| m.as_str().trim()).to_string();
+            let internal_dots = raw_category.chars().filter(|&c| c == '.').count();
+            let depth = leading_dots + internal_dots + 1;
             let text_val = caps.get(3).map_or("", |m| m.as_str().trim()).to_string();
             let props_str = caps.get(4).map_or("", |m| m.as_str().trim());
-            
+
             let properties: Vec<String> = if props_str.is_empty() {
                 Vec::new()
             } else {
                 props_str.split('|').map(|s| s.trim().to_string()).collect()
             };
 
-            // Reset deeper levels
-            if depth < 10 {
-                for d in (depth + 1)..10 {
-                    seq_by_depth[d] = 0;
-                }
+            // 2. Reset deeper state
+            if counters.len() > depth {
+                counters.truncate(depth);
+            }
+            if id_stack.len() > depth {
+                id_stack.truncate(depth);
+            }
+            // Ensure capacity
+            while counters.len() < depth {
+                counters.push(0);
+            }
+            while id_stack.len() < depth {
+                id_stack.push(String::new());
             }
 
-            // Auto-sequence deduction if category is empty
-            if category.is_empty() {
-                let d_idx = depth.min(9);
-                seq_by_depth[d_idx] += 1;
-                category = format!("{}.", seq_by_depth[d_idx]);
-            }
+            // 3. Determine Identifier
+            let category = if leading_dots > 0 {
+                // Relative path: inherit from parent
+                let parent_id = id_stack.get(depth - 2).cloned().unwrap_or_default();
+                if !raw_category.is_empty() {
+                    if parent_id.is_empty() {
+                        raw_category.clone()
+                    } else {
+                        format!("{}.{}", parent_id, raw_category)
+                    }
+                } else {
+                    counters[depth - 1] += 1;
+                    if parent_id.is_empty() {
+                        counters[depth - 1].to_string()
+                    } else {
+                        format!("{}.{}", parent_id, counters[depth - 1])
+                    }
+                }
+            } else {
+                // Absolute path: use verbatim or auto-index if empty
+                if !raw_category.is_empty() {
+                    raw_category.clone()
+                } else {
+                    counters[depth - 1] += 1;
+                    counters[depth - 1].to_string()
+                }
+            };
+
+            // 4. Update ID stack
+            id_stack[depth - 1] = category.clone();
 
             labels.push(SemanticLabel {
                 depth,
                 category,
+                parent_category: None,
                 text: text_val,
                 properties,
                 line: line + 1, // 1-based
@@ -128,6 +167,19 @@ pub fn strip_semantic_labels(text: &str, labels: &[SemanticLabel]) -> String {
         }
     }
     result
+}
+
+/// Strip all text matching the semantic label pattern from a string.
+/// Robust version using regex, useful for partial selections.
+pub fn strip_all_labels_regex(text: &str) -> String {
+    let open_esc = regex::escape(DEFAULT_OPEN);
+    let close_esc = regex::escape(DEFAULT_CLOSE);
+    let pattern = format!("{}[^{}{}]+{}", open_esc, open_esc, close_esc, close_esc);
+    if let Ok(re) = Regex::new(&pattern) {
+        re.replace_all(text, "").to_string()
+    } else {
+        text.to_string()
+    }
 }
 
 pub fn group_labels_by_category(labels: &[SemanticLabel]) -> Vec<(String, Vec<&SemanticLabel>)> {
@@ -166,8 +218,18 @@ pub fn auto_register_labels(labels: &[SemanticLabel], existing: &[LabelType]) ->
 }
 
 pub fn get_label_color(category: &str, types: &[LabelType], fallback: [u8; 3]) -> [u8; 3] {
+    // Try exact match first
     if let Some(lt) = types.iter().find(|t| t.name == category) {
         return lt.color;
     }
+    
+    // Try parent match (e.g., "s5.1" -> try "s5")
+    if let Some(dot_idx) = category.find('.') {
+        let parent = &category[..dot_idx];
+        if let Some(lt) = types.iter().find(|t| t.name == parent) {
+            return lt.color;
+        }
+    }
+    
     fallback
 }

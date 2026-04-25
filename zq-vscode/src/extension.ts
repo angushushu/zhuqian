@@ -265,6 +265,36 @@ export function activate(context: vscode.ExtensionContext) {
 			);
 		})
 	);
+
+	// Register sidebar provider
+	const sidebarProvider = new ZqSidebarProvider(context.extensionUri);
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider('zhuqian.sidebarView', sidebarProvider)
+	);
+
+	// Refresh sidebar when settings change
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeConfiguration(e => {
+			if (e.affectsConfiguration('zhuqian')) {
+				sidebarProvider.refresh();
+			}
+		})
+	);
+}
+
+class ZqSidebarProvider implements vscode.WebviewViewProvider {
+	private _view?: vscode.WebviewView;
+	constructor(private readonly _extensionUri: vscode.Uri) {}
+	public resolveWebviewView(webviewView: vscode.WebviewView) {
+		this._view = webviewView;
+		webviewView.webview.options = { enableScripts: true };
+		this.refresh();
+	}
+	public refresh() {
+		if (this._view) {
+			this._view.webview.html = `<html><body>Sidebar Content</body></html>`;
+		}
+	}
 }
 
 class ZqSettingsPanel {

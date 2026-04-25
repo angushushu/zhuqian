@@ -482,7 +482,7 @@ pub struct LangStrings {
     pub files: String,
     pub outline: String,
     pub semantic: String,
-    pub priority: String,
+    pub logic_links: String,
     pub display_settings: String,
     pub font: String,
     pub font_size: String,
@@ -518,7 +518,7 @@ pub struct LangStrings {
     pub rules_name: String,
     pub copy_clean: String,
     pub hide_labels: String,
-    pub structure: String,
+    pub logic_topology: String,
     // Label management
     #[serde(default = "default_str")]
     pub labels_tab: String,
@@ -532,6 +532,52 @@ pub struct LangStrings {
     pub type_name: String,
     #[serde(default = "default_str")]
     pub description: String,
+    
+    // Command Palette & Help
+    #[serde(default = "default_str")]
+    pub cmd_hint: String,
+    #[serde(default = "default_str")]
+    pub zen_mode_on: String,
+    #[serde(default = "default_str")]
+    pub zen_mode_off: String,
+    #[serde(default = "default_str")]
+    pub labels_on: String,
+    #[serde(default = "default_str")]
+    pub labels_off: String,
+    #[serde(default = "default_str")]
+    pub help_shortcuts: String,
+    #[serde(default = "default_str")]
+    pub help_syntax: String,
+    #[serde(default = "default_str")]
+    pub links: String,
+    #[serde(default = "default_str")]
+    pub templates: String,
+    #[serde(default = "default_str")]
+    pub apply_template: String,
+    
+    // Settings & Sidebar tooltips
+    #[serde(default = "default_str")]
+    pub search_font: String,
+    #[serde(default = "default_str")]
+    pub dict_tab: String,
+    #[serde(default = "default_str")]
+    pub tag_codes: String,
+    #[serde(default = "default_str")]
+    pub tag_codes_desc: String,
+    #[serde(default = "default_str")]
+    pub rel_codes: String,
+    #[serde(default = "default_str")]
+    pub rel_codes_desc: String,
+    #[serde(default = "default_str")]
+    pub shortcode: String,
+    #[serde(default = "default_str")]
+    pub add_tag: String,
+    #[serde(default = "default_str")]
+    pub add_rel: String,
+    #[serde(default = "default_str")]
+    pub semantic_header: String,
+    #[serde(default = "default_str")]
+    pub topology_header: String,
 }
 
 fn default_str() -> String { String::new() }

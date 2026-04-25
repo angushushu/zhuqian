@@ -23,6 +23,24 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "zhuqian-sidebar",
+          "title": "ZhuQian 竹签",
+          "icon": "zq_icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "zhuqian-sidebar": [
+        {
+          "type": "webview",
+          "id": "zhuqian.sidebarView",
+          "name": "ZhuQian 设置"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "zq",

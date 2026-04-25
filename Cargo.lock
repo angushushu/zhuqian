@@ -5063,6 +5063,7 @@ dependencies = [
  "dirs",
  "eframe",
  "image",
+ "regex",
  "rfd",
  "serde",
  "serde_json",

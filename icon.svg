@@ -1,11 +1,11 @@
 <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- Symmetrical Bamboo Skewer -->
-  <rect x="61" y="24" width="6" height="80" fill="#8eac50"/>
+  <rect x="59" y="24" width="10" height="80" fill="#8eac50"/>
   
   <!-- Slender, Diagonal Shuttle-Shaped Leaf -->
   <path d="M64 36C76 26 92 18 104 14C92 26 76 42 64 42V36Z" fill="#8eac50"/>
   
   <!-- Aligned Geek Brackets [ ] -->
-  <path d="M42 44H32V84H42" stroke="#8eac50" stroke-width="4"/>
-  <path d="M86 44H96V84H86" stroke="#8eac50" stroke-width="4"/>
+  <path d="M42 44H32V84H42" stroke="#8eac50" stroke-width="8"/>
+  <path d="M86 44H96V84H86" stroke="#8eac50" stroke-width="8"/>
 </svg>

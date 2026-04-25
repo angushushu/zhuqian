@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Bamboo stalks -->
+  <rect x="6.5" y="2" width="3" height="20" rx="1.5" fill="currentColor"/>
+  <rect x="14.5" y="2" width="3" height="20" rx="1.5" fill="currentColor"/>
+  <!-- Nodes / joints -->
+  <rect x="4.5" y="8" width="7" height="2.5" rx="1.25" fill="currentColor"/>
+  <rect x="12.5" y="13.5" width="7" height="2.5" rx="1.25" fill="currentColor"/>
+</svg>
