@@ -342,10 +342,10 @@ fn render_semantic_outline(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side
                 let depth_color = app.prefs.theme.level_colors[depth_idx];
                 let depth_color32 = egui::Color32::from_rgb(depth_color[0], depth_color[1], depth_color[2]);
 
-                let cat_color = if let Some(lt) = app.prefs.label_types.iter().find(|t| t.name == label.category) {
-                    lt.color
+                let cat_color = if label.explicit_leaf.is_some() {
+                    parser::get_label_color(&label.category, &app.prefs.label_types, depth_color)
                 } else {
-                    depth_color 
+                    [150, 150, 150]
                 };
                 let cat_color32 = egui::Color32::from_rgb(cat_color[0], cat_color[1], cat_color[2]);
 
@@ -600,10 +600,10 @@ fn render_logic_graph(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egu
             };
             let depth_color32 = egui::Color32::from_rgb(depth_color[0], depth_color[1], depth_color[2]);
 
-            let cat_color = if let Some(lt) = app.prefs.label_types.iter().find(|t| t.name == key) {
-                lt.color
+            let cat_color = if label.explicit_leaf.is_some() {
+                parser::get_label_color(&key, &app.prefs.label_types, depth_color)
             } else {
-                depth_color // Fallback
+                [150, 150, 150]
             };
             let cat_color32 = egui::Color32::from_rgb(cat_color[0], cat_color[1], cat_color[2]);
             

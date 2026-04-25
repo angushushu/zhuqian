@@ -51,13 +51,6 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                 active_pane: &mut SplitPane,
                 pane_type: SplitPane
             | {
-                // Auto-register label types from current text
-                let text_for_labels = tab.text.clone();
-                let labels = parser::parse_semantic_labels(&text_for_labels);
-                let updated_types = parser::auto_register_labels(&labels, &prefs.label_types);
-                if updated_types.len() != prefs.label_types.len() {
-                    prefs.label_types = updated_types;
-                }
 
                 let mut layouter = |ui: &egui::Ui, string: &dyn egui::TextBuffer, wrap_width: f32| {
                     let current_text = string.as_str();
@@ -530,7 +523,7 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                                         if prop.starts_with(&rel.prefix) {
                                             let target_name = prop.trim_start_matches(&rel.prefix).trim().to_string();
                                             if let Some(target) = mm_labels.iter().find(|l| l.category == target_name || l.text == target_name) {
-                                                relations.push((target.line, target.category.clone(), target.text.clone()));
+                                                relations.push((target.line, target.category.clone(), target.text.clone(), target.explicit_leaf.clone()));
                                             }
                                         }
                                     }
@@ -543,7 +536,7 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                                     if label.start_byte == active_label.start_byte { continue; }
                                     for prop in &label.properties {
                                         if prop.contains(&my_name) || prop.contains(&my_text) {
-                                            relations.push((label.line, label.category.clone(), label.text.clone()));
+                                            relations.push((label.line, label.category.clone(), label.text.clone(), label.explicit_leaf.clone()));
                                         }
                                     }
                                 }
@@ -553,8 +546,12 @@ pub(crate) fn render_editor(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                                     ui.add_space(4.0);
                                     ui.horizontal(|ui| {
                                         ui.label(egui::RichText::new(&s.links).size(11.0).color(mm_text2.gamma_multiply(0.5)));
-                                        for (line, cat, txt) in &relations {
-                                            let cat_color = parser::get_label_color(cat, &mm_label_types, mm_accent_ui);
+                                        for (line, cat, txt, leaf) in &relations {
+                                            let cat_color = if leaf.is_some() {
+                                                parser::get_label_color(cat, &mm_label_types, mm_accent_ui)
+                                            } else {
+                                                [150, 150, 150]
+                                            };
                                             let cat_c32 = egui::Color32::from_rgb(cat_color[0], cat_color[1], cat_color[2]);
                                             let pill_bg = cat_c32.gamma_multiply(0.2);
                                             let pill = egui::RichText::new(format!("[{}] {}", cat, txt))

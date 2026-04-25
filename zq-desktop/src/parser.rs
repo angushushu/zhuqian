@@ -7,7 +7,7 @@ pub use zq_core::{
     deserialize_zq_file, serialize_zq_file,
     LabelType, SemanticLabel, TagCode, RelationCode,
     parse_semantic_labels, parse_semantic_labels_with_delim, group_labels_by_category,
-    strip_semantic_labels, strip_all_labels_regex, auto_register_labels, get_label_color,
+    strip_semantic_labels, strip_all_labels_regex, get_label_color,
     ZqTemplate, validate_document, parse_template_directive,
 };
 
