@@ -38,7 +38,7 @@ pub(crate) fn render_settings(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                     ui.selectable_value(&mut app.settings_tab, SettingTab::General, if app.prefs.language == Language::Zh { "通用" } else { "General" });
                     ui.selectable_value(&mut app.settings_tab, SettingTab::Colors, if app.prefs.language == Language::Zh { "配色" } else { "Theme" });
                     ui.selectable_value(&mut app.settings_tab, SettingTab::Labels, &s.labels_tab);
-                    ui.selectable_value(&mut app.settings_tab, SettingTab::Dictionary, "字典/简码");
+                    ui.selectable_value(&mut app.settings_tab, SettingTab::Dictionary, &s.dict_tab);
                 });
                 ui.add(egui::Separator::default().spacing(8.0));
 
@@ -46,7 +46,7 @@ pub(crate) fn render_settings(app: &mut ZhuQianEditor, ctx: &egui::Context) {
                     SettingTab::General => render_general_tab(app, ui, text_side, &s),
                     SettingTab::Colors => render_colors_tab(app, ctx, ui, text_side, accent_ui, &s),
                     SettingTab::Labels => render_labels_tab(app, ui, text_side, accent_ui, &s),
-                    SettingTab::Dictionary => render_dictionary_tab(app, ui, text_side, accent_ui),
+                    SettingTab::Dictionary => render_dictionary_tab(app, ui, text_side, accent_ui, &s),
                 }
             });
         });
@@ -57,7 +57,7 @@ fn render_general_tab(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egu
     ui.label(egui::RichText::new(&s.font).size(11.0).color(text_side));
     ui.horizontal(|ui| {
         ui.add(egui::TextEdit::singleline(&mut app.font_search)
-            .hint_text(if app.prefs.language == Language::Zh { "搜索字体..." } else { "Search font..." })
+            .hint_text(&s.search_font)
             .desired_width(160.0));
     });
     let search_lower = app.font_search.to_lowercase();
@@ -118,9 +118,9 @@ fn render_colors_tab(app: &mut ZhuQianEditor, ctx: &egui::Context, ui: &mut egui
         macro_rules! color_row {
             ($label:expr, $field:expr) => {
                 ui.horizontal(|ui| {
-                    let mut c = [$field[0] as f32/255.0, $field[1] as f32/255.0, $field[2] as f32/255.0];
-                    if ui.color_edit_button_rgb(&mut c).changed() {
-                        $field = [(c[0]*255.0) as u8, (c[1]*255.0) as u8, (c[2]*255.0) as u8];
+                    let mut color = egui::Color32::from_rgb($field[0], $field[1], $field[2]);
+                    if ui.color_edit_button_srgba(&mut color).changed() {
+                        $field = [color.r(), color.g(), color.b()];
                     }
                     ui.label(egui::RichText::new($label).size(11.0).color(text_side));
                 });
@@ -177,7 +177,7 @@ fn render_colors_tab(app: &mut ZhuQianEditor, ctx: &egui::Context, ui: &mut egui
             }
         });
         ui.add_space(16.0);
-        ui.label(egui::RichText::new("语义层级颜色").size(11.0).color(accent_ui));
+        ui.label(egui::RichText::new(if app.prefs.language == Language::Zh { "语义层级颜色" } else { "Semantic Level Colors" }).size(11.0).color(accent_ui));
         ui.add_space(8.0);
         
         for i in 0..app.prefs.theme.level_colors.len() {
@@ -204,13 +204,13 @@ fn render_labels_tab(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egui
             let is_system = lt.name == "注";
 
             ui.horizontal(|ui| {
-                let mut c = [lt.color[0] as f32 / 255.0, lt.color[1] as f32 / 255.0, lt.color[2] as f32 / 255.0];
-                if ui.color_edit_button_rgb(&mut c).changed() {
-                    lt.color = [(c[0] * 255.0) as u8, (c[1] * 255.0) as u8, (c[2] * 255.0) as u8];
+                let mut color = egui::Color32::from_rgb(lt.color[0], lt.color[1], lt.color[2]);
+                if ui.color_edit_button_srgba(&mut color).changed() {
+                    lt.color = [color.r(), color.g(), color.b()];
                 }
                 ui.label(egui::RichText::new(&lt.name).size(11.0).color(text_side).strong());
                 if is_system {
-                    ui.label(egui::RichText::new("(系统)").size(10.0).color(text_side.gamma_multiply(0.5)));
+                    ui.label(egui::RichText::new(if app.prefs.language == Language::Zh { "(系统)" } else { "(System)" }).size(10.0).color(text_side.gamma_multiply(0.5)));
                 } else {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.add(egui::Button::new(egui::RichText::new("×").size(10.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
@@ -234,7 +234,15 @@ fn render_labels_tab(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egui
                 ui.add(egui::TextEdit::singleline(&mut app.new_label_type_name)
                     .hint_text(&s.type_name)
                     .desired_width(100.0));
-                ui.color_edit_button_rgb(&mut app.new_label_type_color);
+                
+                let mut new_col = egui::Color32::from_rgb(
+                    (app.new_label_type_color[0] * 255.0) as u8,
+                    (app.new_label_type_color[1] * 255.0) as u8,
+                    (app.new_label_type_color[2] * 255.0) as u8,
+                );
+                if ui.color_edit_button_srgba(&mut new_col).changed() {
+                    app.new_label_type_color = [new_col.r() as f32 / 255.0, new_col.g() as f32 / 255.0, new_col.b() as f32 / 255.0];
+                }
             });
             if ui.button(&s.add).clicked() && !app.new_label_type_name.is_empty() {
                 let c = [
@@ -257,11 +265,11 @@ fn render_labels_tab(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egui
     });
 }
 
-fn render_dictionary_tab(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egui::Color32, accent_ui: egui::Color32) {
+fn render_dictionary_tab(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egui::Color32, accent_ui: egui::Color32, s: &parser::LangStrings) {
     egui::ScrollArea::vertical().show(ui, |ui| {
         // Tag Codes
-        ui.label(egui::RichText::new("Tag Codes (标签标识简码)").size(12.0).color(accent_ui).strong());
-        ui.label(egui::RichText::new("用于为主观标记分配图标和颜色效果（例如：+、-、?）").size(10.0).color(text_side));
+        ui.label(egui::RichText::new(&s.tag_codes).size(12.0).color(accent_ui).strong());
+        ui.label(egui::RichText::new(&s.tag_codes_desc).size(10.0).color(text_side));
         ui.add_space(8.0);
         
         let mut to_remove_tag = None;
@@ -271,23 +279,23 @@ fn render_dictionary_tab(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: 
                 if ui.color_edit_button_rgb(&mut c).changed() {
                     t.color = [(c[0]*255.0) as f32, (c[1]*255.0) as f32, (c[2]*255.0) as f32];
                 }
-                ui.add(egui::TextEdit::singleline(&mut t.symbol).desired_width(30.0).hint_text("简码"));
-                ui.add(egui::TextEdit::singleline(&mut t.label).desired_width(120.0).hint_text("说明"));
+                ui.add(egui::TextEdit::singleline(&mut t.symbol).desired_width(30.0).hint_text(&s.shortcode));
+                ui.add(egui::TextEdit::singleline(&mut t.label).desired_width(120.0).hint_text(&s.description));
                 if ui.add(egui::Button::new(egui::RichText::new("×").size(10.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
                     to_remove_tag = Some(i);
                 }
             });
         }
         if let Some(i) = to_remove_tag { app.prefs.tag_codes.remove(i); }
-        if ui.button("+ Add Tag Code").clicked() {
+        if ui.button(&s.add_tag).clicked() {
             app.prefs.tag_codes.push(crate::parser::TagCode { symbol: "?".into(), label: "New Tag".into(), color: [0.5, 0.5, 0.5] });
         }
         
         ui.add_space(16.0);
         
         // Relation Codes
-        ui.label(egui::RichText::new("Relation Codes (指向关系简码)").size(12.0).color(accent_ui).strong());
-        ui.label(egui::RichText::new("用于逻辑网络拓扑图的可视化连线（例如：sp, rf, @）").size(10.0).color(text_side));
+        ui.label(egui::RichText::new(&s.rel_codes).size(12.0).color(accent_ui).strong());
+        ui.label(egui::RichText::new(&s.rel_codes_desc).size(10.0).color(text_side));
         ui.add_space(8.0);
         
         let mut to_remove_rel = None;
@@ -297,16 +305,17 @@ fn render_dictionary_tab(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: 
                 if ui.color_edit_button_rgb(&mut c).changed() {
                     r.color = [(c[0]*255.0) as f32, (c[1]*255.0) as f32, (c[2]*255.0) as f32];
                 }
-                ui.add(egui::TextEdit::singleline(&mut r.prefix).desired_width(30.0).hint_text("简码"));
-                ui.add(egui::TextEdit::singleline(&mut r.label).desired_width(120.0).hint_text("说明"));
+                ui.add(egui::TextEdit::singleline(&mut r.prefix).desired_width(30.0).hint_text(&s.shortcode));
+                ui.add(egui::TextEdit::singleline(&mut r.label).desired_width(120.0).hint_text(&s.description));
                 if ui.add(egui::Button::new(egui::RichText::new("×").size(10.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
                     to_remove_rel = Some(i);
                 }
             });
         }
         if let Some(i) = to_remove_rel { app.prefs.relation_codes.remove(i); }
-        if ui.button("+ Add Relation Code").clicked() {
+        if ui.button(&s.add_rel).clicked() {
             app.prefs.relation_codes.push(crate::parser::RelationCode { prefix: "new".into(), label: "New Relation".into(), color: [0.5, 0.5, 0.5] });
         }
     });
 }
+

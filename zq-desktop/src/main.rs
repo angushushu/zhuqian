@@ -96,27 +96,34 @@ impl eframe::App for ZhuQianEditor {
 
         // Keyboard shortcuts
         let mut cmd_to_run = None;
-        ctx.input(|i| {
-            if i.modifiers.ctrl && i.key_pressed(egui::Key::S) {
+        ctx.input_mut(|i| {
+            use egui::{KeyboardShortcut, Modifiers, Key};
+            let ctrl = Modifiers::CTRL;
+            let shift_ctrl = Modifiers::CTRL | Modifiers::SHIFT;
+
+            if i.consume_shortcut(&KeyboardShortcut::new(ctrl, Key::S)) {
                 cmd_to_run = Some(app::EditorCommand::SaveCurrent);
             }
-            if i.modifiers.ctrl && i.key_pressed(egui::Key::N) {
+            if i.consume_shortcut(&KeyboardShortcut::new(ctrl, Key::N)) {
                 cmd_to_run = Some(app::EditorCommand::NewFile);
             }
-            if i.modifiers.ctrl && i.modifiers.shift && i.key_pressed(egui::Key::C) {
-                cmd_to_run = Some(app::EditorCommand::CopyClean);
-            }
-            if i.modifiers.ctrl && i.key_pressed(egui::Key::B) {
-                cmd_to_run = Some(app::EditorCommand::ToggleSidebar);
-            }
-            if i.modifiers.ctrl && !i.modifiers.shift && i.key_pressed(egui::Key::P) {
+            if i.consume_shortcut(&KeyboardShortcut::new(shift_ctrl, Key::P)) {
                 cmd_to_run = Some(app::EditorCommand::ToggleCommandPalette);
             }
-            if i.modifiers.ctrl && i.modifiers.shift && i.key_pressed(egui::Key::P) {
+            if i.consume_shortcut(&KeyboardShortcut::new(ctrl, Key::P)) {
+                cmd_to_run = Some(app::EditorCommand::ToggleQuickNav);
+            }
+            if i.consume_shortcut(&KeyboardShortcut::new(ctrl, Key::Comma)) {
                 cmd_to_run = Some(app::EditorCommand::ToggleSettings);
             }
-            if i.modifiers.ctrl && i.key_pressed(egui::Key::Backslash) {
+            if i.consume_shortcut(&KeyboardShortcut::new(ctrl, Key::B)) {
+                cmd_to_run = Some(app::EditorCommand::ToggleSidebar);
+            }
+            if i.consume_shortcut(&KeyboardShortcut::new(ctrl, Key::Backslash)) {
                 cmd_to_run = Some(app::EditorCommand::ToggleSplitRight);
+            }
+            if i.consume_shortcut(&KeyboardShortcut::new(ctrl, Key::G)) {
+                cmd_to_run = Some(app::EditorCommand::ToggleQuickNav);
             }
         });
         if let Some(cmd) = cmd_to_run {
@@ -129,10 +136,14 @@ impl eframe::App for ZhuQianEditor {
         let accent_ui  = egui::Color32::from_rgb(self.prefs.theme.accent_ui[0], self.prefs.theme.accent_ui[1], self.prefs.theme.accent_ui[2]);
 
         let mut visuals = if is_dark { egui::Visuals::dark() } else { egui::Visuals::light() };
+        visuals.window_corner_radius = egui::CornerRadius::ZERO;
+        visuals.menu_corner_radius = egui::CornerRadius::ZERO;
         visuals.widgets.noninteractive.corner_radius = egui::CornerRadius::ZERO;
         visuals.widgets.inactive.corner_radius = egui::CornerRadius::ZERO;
         visuals.widgets.hovered.corner_radius = egui::CornerRadius::ZERO;
         visuals.widgets.active.corner_radius = egui::CornerRadius::ZERO;
+        visuals.widgets.open.corner_radius = egui::CornerRadius::ZERO;
+        
         visuals.widgets.noninteractive.bg_fill = bg_side;
         visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, text_side);
         visuals.widgets.inactive.bg_fill = bg_side;
@@ -150,5 +161,7 @@ impl eframe::App for ZhuQianEditor {
         settings::render_settings(self, ctx);
         editor::render_editor(self, ctx);
         menus::render_command_palette(self, ctx);
+        menus::render_quick_nav(self, ctx);
+        menus::render_help(self, ctx);
     }
 }
