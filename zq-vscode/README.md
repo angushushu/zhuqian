@@ -1,5 +1,7 @@
 # ZhuQian Labels for VS Code
 
+[English] | [简体中文](./README_zh.md)
+
 ZhuQian Labels is the official VS Code companion for the ZhuQian Editor—the world's most elegant, bamboo-inspired text processor. 
 
 ## Features
