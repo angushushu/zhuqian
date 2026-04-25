@@ -301,7 +301,6 @@ fn render_semantic_outline(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side
         }
 
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new(&s.semantic_header).size(12.0).color(accent_ui).strong());
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.selectable_label(app.show_logic_overlay, "🔗").on_hover_text(&s.logic_links).clicked() { 
                     app.show_logic_overlay = !app.show_logic_overlay; 
@@ -531,11 +530,7 @@ fn render_logic_graph(app: &mut ZhuQianEditor, ui: &mut egui::Ui, text_side: egu
         return;
     }
 
-    ui.vertical_centered(|ui| {
-        ui.add_space(4.0);
-        ui.label(egui::RichText::new(&s.topology_header).size(13.0).color(accent_ui).strong());
-        ui.add_space(8.0);
-    });
+    ui.add_space(8.0);
 
     // Both-way scroll for the large graph area
     egui::ScrollArea::both().id_salt("topology_scroll").show(ui, |ui| {

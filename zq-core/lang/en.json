@@ -75,7 +75,5 @@
   "rel_codes_desc": "Used for visual line connection in logic network topology (e.g. sp, rf, @)",
   "shortcode": "Code",
   "add_tag": "+ Add Tag Code",
-  "add_rel": "+ Add Relation Code",
-  "semantic_header": "Mind Scaffold & Health",
-  "topology_header": "Logic Relation Topology"
+  "add_rel": "+ Add Relation Code"
 }

@@ -75,7 +75,5 @@
   "rel_codes_desc": "用于逻辑网络拓扑图的可视化连线（例如：sp, rf, @）",
   "shortcode": "简码",
   "add_tag": "+ 添加标签简码",
-  "add_rel": "+ 添加关系简码",
-  "semantic_header": "心智支架与健康检查",
-  "topology_header": "逻辑指向关系拓扑"
+  "add_rel": "+ 添加关系简码"
 }
